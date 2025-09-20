@@ -22,6 +22,7 @@ class VFSApp:
             self.print_output(f"Скрипт для выполнения: {script_path}")
             self.root.after(1000, self.run_script)
 
+
     def create_widgets(self):
         self.output_area = scrolledtext.ScrolledText(
             self.root,
@@ -40,6 +41,7 @@ class VFSApp:
 
         self.execute_button = Button(input_frame, text="Execute", command=self.execute_command)
         self.execute_button.pack(side=tk.RIGHT, padx=(5, 0))
+
 
     def execute_command(self, event=None):
         command_line = self.command_entry.get().strip()
@@ -69,6 +71,8 @@ class VFSApp:
                         self.reverse_text(args)
                     elif command == "find":
                         self.find_in_vfs(args)
+                    elif command == "chmod":
+                        self.change_permissions(args)
                     else:
                         self.print_output(f"Unknown command: {command}")
 
@@ -79,11 +83,13 @@ class VFSApp:
 
             self.command_entry.delete(0, tk.END)
 
+
     def print_output(self, text):
         self.output_area.config(state='normal')
         self.output_area.insert(tk.END, text + "\n")
         self.output_area.see(tk.END)
         self.output_area.config(state='disabled')
+
 
     def parse_command(self, command_line):
         tokens = []
@@ -115,6 +121,7 @@ class VFSApp:
             raise ValueError("Незакрытые кавычки в команде")
 
         return tokens
+
 
     def run_script(self):
         if not self.script_path or not os.path.exists(self.script_path):
@@ -150,21 +157,25 @@ class VFSApp:
                             "user": {
                                 "type": "directory",
                                 "content": {
-                                    "documents": {"type": "directory", "content": {}},
-                                    "photos": {"type": "directory", "content": {}}
-                                }
+                                    "documents": {"type": "directory", "content": {}, "perms": "755"},
+                                    "photos": {"type": "directory", "content": {}, "perms": "755"}
+                                },
+                                "perms": "755"
                             }
-                        }
+                        },
+                        "perms": "755"
                     },
                     "etc": {
                         "type": "directory",
                         "content": {
-                            "config.txt": {"type": "file", "size": 1024},
-                            "settings.ini": {"type": "file", "size": 512}
-                        }
+                            "config.txt": {"type": "file", "size": 1024, "perms": "644"},
+                            "settings.ini": {"type": "file", "size": 512, "perms": "644"}
+                        },
+                        "perms": "755"
                     },
-                    "readme.txt": {"type": "file", "size": 2048}
-                }
+                    "readme.txt": {"type": "file", "size": 2048, "perms": "644"}
+                },
+                "perms": "755"
             }
         }
         self.current_dir = "/"
@@ -174,12 +185,15 @@ class VFSApp:
             shutil.rmtree(self.vfs_path)
         os.makedirs(self.vfs_path, exist_ok=True)
 
+
     def list_directory(self, args):
         try:
-            if not args:
+            show_details = "-l" in args
+            path_args = [arg for arg in args if arg != "-l"]
+            if not path_args:
                 target_path = self.current_dir
             else:
-                target_path = args[0]
+                target_path = path_args[0]
                 if not target_path.startswith('/'):
                     target_path = os.path.join(self.current_dir, target_path).replace('\\', '/')
             target_dir = self.get_directory_by_path(target_path)
@@ -188,15 +202,20 @@ class VFSApp:
                 return
             items = []
             for name, item in target_dir["content"].items():
-                item_type = "d" if item["type"] == "directory" else "f"
-                size = f" ({item['size']}b)" if item["type"] == "file" else ""
-                items.append(f"{item_type} {name}{size}")
+                if show_details:
+                    item_type = "d" if item["type"] == "directory" else "f"
+                    perms = item.get("perms", "???")
+                    size = f" {item['size']}b" if item["type"] == "file" else ""
+                    items.append(f"{item_type}{perms} {name}{size}")
+                else:
+                    items.append(name)
 
             self.print_output(f"Содержимое {target_path}:")
             self.print_output("\n".join(items) if items else "  Директория пуста")
 
         except Exception as e:
             self.print_output(f"Ошибка ls: {e}")
+
 
     def change_directory(self, args):
         if not args:
@@ -225,11 +244,10 @@ class VFSApp:
                     self.print_output(f"Ошибка: {new_path} не является директорией")
                 else:
                     self.current_dir = new_path
-
             self.print_output(f"Текущая директория: {self.current_dir}")
-
         except Exception as e:
             self.print_output(f"Ошибка cd: {e}")
+
 
     def get_directory_by_path(self, path):
         if path == "/":
@@ -259,6 +277,7 @@ class VFSApp:
                 return False
         return current is not None
 
+
     def reverse_text(self, args):
         if not args:
             self.print_output("Ошибка: укажите текст для реверса")
@@ -267,6 +286,7 @@ class VFSApp:
         text = " ".join(args)
         reversed_text = text[::-1]
         self.print_output(f"Реверс: {reversed_text}")
+
 
     def find_in_vfs(self, args):
         if not args:
@@ -284,6 +304,7 @@ class VFSApp:
         else:
             self.print_output("Ничего не найдено")
 
+
     def _search_recursive(self, current_path, current_item, search_name, results):
         if current_item["type"] == "directory":
             for name, item in current_item["content"].items():
@@ -293,6 +314,28 @@ class VFSApp:
                     results.append(f"{item_path} ({item_type})")
                 self._search_recursive(item_path, item, search_name, results)
 
+
+    def change_permissions(self, args):
+        if len(args) < 2:
+            self.print_output("Ошибка: укажите права и путь (chmod права путь)")
+            return
+        perms = args[0]
+        target_path = args[1]
+        if not perms.isdigit() or len(perms) != 3 or not all(0 <= int(p) <= 7 for p in perms):
+            self.print_output("Ошибка: права доступа должны быть трехзначным числом (например: 755)")
+            return
+        if not target_path.startswith('/'):
+            target_path = os.path.join(self.current_dir, target_path).replace('\\', '/')
+        try:
+            target_item = self.get_directory_by_path(target_path)
+            if not target_item:
+                self.print_output(f"Ошибка: {target_path} не существует")
+                return
+            target_item["perms"] = perms
+            self.print_output(f"Права {target_path} изменены на {perms}")
+
+        except Exception as e:
+            self.print_output(f"Ошибка chmod: {e}")
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description='VFS Emulator')

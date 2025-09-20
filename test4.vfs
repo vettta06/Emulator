@@ -1,0 +1,28 @@
+echo "=== Тестирование chmod ==="
+
+echo "1. Текущие права доступа:"
+ls -l
+
+echo "2. Изменение прав файла:"
+chmod 777 readme.txt
+ls -l
+
+echo "3. Изменение прав директории:"
+chmod 700 home
+ls -l
+cd home
+ls -l
+cd /
+
+echo "4. Ошибки chmod:"
+chmod 888 readme.txt
+chmod 755 nonexistent
+chmod 644
+chmod abc readme.txt
+
+echo "5. Восстановление прав:"
+chmod 644 readme.txt
+chmod 755 home
+ls -l
+
+echo "Тестирование chmod завершено!"
