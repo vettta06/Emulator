@@ -65,6 +65,10 @@ class VFSApp:
                         self.print_output("VFS инициализирована по умолчанию")
                     elif command == "pwd":
                         self.print_output(f"Текущая директория: {self.current_dir}")
+                    elif command == "rev":
+                        self.reverse_text(args)
+                    elif command == "find":
+                        self.find_in_vfs(args)
                     else:
                         self.print_output(f"Unknown command: {command}")
 
@@ -170,24 +174,29 @@ class VFSApp:
             shutil.rmtree(self.vfs_path)
         os.makedirs(self.vfs_path, exist_ok=True)
 
-
     def list_directory(self, args):
         try:
-            current = self.get_current_directory()
-            if not current or current["type"] != "directory":
-                self.print_output("Ошибка: не является директорией")
+            if not args:
+                target_path = self.current_dir
+            else:
+                target_path = args[0]
+                if not target_path.startswith('/'):
+                    target_path = os.path.join(self.current_dir, target_path).replace('\\', '/')
+            target_dir = self.get_directory_by_path(target_path)
+            if not target_dir or target_dir["type"] != "directory":
+                self.print_output(f"Ошибка: {target_path} не является директорией")
                 return
-
             items = []
-            for name, item in current["content"].items():
+            for name, item in target_dir["content"].items():
                 item_type = "d" if item["type"] == "directory" else "f"
-                items.append(f"{item_type} {name}")
+                size = f" ({item['size']}b)" if item["type"] == "file" else ""
+                items.append(f"{item_type} {name}{size}")
 
-            self.print_output("\n".join(items) if items else "Директория пуста")
+            self.print_output(f"Содержимое {target_path}:")
+            self.print_output("\n".join(items) if items else "  Директория пуста")
 
         except Exception as e:
             self.print_output(f"Ошибка ls: {e}")
-
 
     def change_directory(self, args):
         if not args:
@@ -199,33 +208,41 @@ class VFSApp:
             if path == "/":
                 self.current_dir = "/"
             elif path == "..":
-                if self.current_dir != "/":
+                if self.current_dir == "/":
+                    self.print_output("Ошибка: уже в корневой директории")
+                else:
                     parts = self.current_dir.rstrip('/').split('/')
                     self.current_dir = '/' + '/'.join(parts[:-1]) if len(parts) > 1 else "/"
             else:
-                new_path = os.path.join(self.current_dir, path).replace('\\', '/')
-                if self.path_exists(new_path):
-                    self.current_dir = new_path
+                if path.startswith('/'):
+                    new_path = path
                 else:
-                    self.print_output(f"Ошибка: директория {path} не существует")
+                    new_path = os.path.join(self.current_dir, path).replace('\\', '/')
+                target = self.get_directory_by_path(new_path)
+                if not target:
+                    self.print_output(f"Ошибка: путь {new_path} не существует")
+                elif target["type"] != "directory":
+                    self.print_output(f"Ошибка: {new_path} не является директорией")
+                else:
+                    self.current_dir = new_path
 
             self.print_output(f"Текущая директория: {self.current_dir}")
 
         except Exception as e:
             self.print_output(f"Ошибка cd: {e}")
 
-
-    def get_current_directory(self):
-        if self.current_dir == "/":
+    def get_directory_by_path(self, path):
+        if path == "/":
             return self.current_vfs.get("/")
 
-        parts = self.current_dir.strip('/').split('/')
+        parts = path.strip('/').split('/')
         current = self.current_vfs.get("/")
+
         for part in parts:
-            if part and current and current["type"] == "directory":
-                current = current["content"].get(part)
-            else:
+            if not part or not current or current["type"] != "directory":
                 return None
+            current = current["content"].get(part)
+
         return current
 
 
@@ -241,6 +258,40 @@ class VFSApp:
             else:
                 return False
         return current is not None
+
+    def reverse_text(self, args):
+        if not args:
+            self.print_output("Ошибка: укажите текст для реверса")
+            return
+
+        text = " ".join(args)
+        reversed_text = text[::-1]
+        self.print_output(f"Реверс: {reversed_text}")
+
+    def find_in_vfs(self, args):
+        if not args:
+            self.print_output("Ошибка: укажите имя для поиска")
+            return
+
+        search_name = args[0]
+        results = []
+        self._search_recursive("/", self.current_vfs["/"], search_name, results)
+
+        if results:
+            self.print_output(f"Найдено {len(results)} результатов:")
+            for result in results:
+                self.print_output(f"  {result}")
+        else:
+            self.print_output("Ничего не найдено")
+
+    def _search_recursive(self, current_path, current_item, search_name, results):
+        if current_item["type"] == "directory":
+            for name, item in current_item["content"].items():
+                item_path = f"{current_path}/{name}" if current_path != "/" else f"/{name}"
+                if name == search_name:
+                    item_type = "директория" if item["type"] == "directory" else "файл"
+                    results.append(f"{item_path} ({item_type})")
+                self._search_recursive(item_path, item, search_name, results)
 
 
 def parse_arguments():
