@@ -1,0 +1,5 @@
+ls -l -a
+cd "/home/user/projects"
+echo "It's VFS emulator"
+ls "my_folder with spaces"
+echo "Testing: 'single' and \"double\""

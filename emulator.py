@@ -1,13 +1,23 @@
 import tkinter as tk
 from tkinter import scrolledtext, Entry, Button, Frame
+import argparse
+import os
 
 
 class VFSApp:
-    def __init__(self, root):
+    def __init__(self, root, vfs_path='./vfs_root', script_path=None):
         self.root = root
         self.root.title("VFS")
         self.root.geometry("800x600")
+        self.vfs_path = vfs_path
+        self.script_path = script_path
+
         self.create_widgets()
+        self.print_output(f"VFS Emulator запущен")
+        self.print_output(f"VFS путь: {vfs_path}")
+        if script_path:
+            self.print_output(f"Скрипт для выполнения: {script_path}")
+            self.root.after(1000, self.run_script)
 
     def create_widgets(self):
         self.output_area = scrolledtext.ScrolledText(
@@ -44,6 +54,9 @@ class VFSApp:
                         self.print_output(f"ls command with args: {args}")
                     elif command == "cd":
                         self.print_output(f"cd command with args: {args}")
+                    elif command == "echo":
+                        message = " ".join(args)
+                        self.print_output(message)
                     else:
                         self.print_output(f"Unknown command: {command}")
 
@@ -91,8 +104,45 @@ class VFSApp:
 
         return tokens
 
+    def run_script(self):
+        if not self.script_path or not os.path.exists(self.script_path):
+            self.print_output(f"Ошибка: Скрипт {self.script_path} не найден")
+            return
+
+        self.print_output(f"# Выполнение скрипта: {self.script_path}")
+        self.print_output("#" + "=" * 50)
+
+        try:
+            with open(self.script_path, 'r', encoding='utf-8') as f:
+                for line_num, line in enumerate(f, 1):
+                    line = line.strip()
+                    if not line or line.startswith('#'):
+                        continue
+                    self.print_output(f"[Скрипт:{line_num}] > {line}")
+                    self.command_entry.delete(0, tk.END)
+                    self.command_entry.insert(0, line)
+                    self.execute_command()
+
+        except Exception as e:
+            self.print_output(f"Ошибка чтения скрипта: {e}")
+
+def parse_arguments():
+    parser = argparse.ArgumentParser(description='VFS Emulator')
+    parser.add_argument('--vfs-path', '-v', type=str, default='./vfs_root',
+                        help='Путь к физическому расположению VFS')
+    parser.add_argument('--script', '-s', type=str,
+                        help='Путь к стартовому скрипту')
+    return parser.parse_args()
+
 
 if __name__ == "__main__":
+    args = parse_arguments()
+    print("=" * 50)
+    print("ПАРАМЕТРЫ ЗАПУСКА:")
+    print(f"VFS путь: {args.vfs_path}")
+    print(f"Скрипт: {args.script if args.script else 'Не указан'}")
+    print("=" * 50)
+
     root = tk.Tk()
-    app = VFSApp(root)
+    app = VFSApp(root, vfs_path=args.vfs_path, script_path=args.script)
     root.mainloop()
