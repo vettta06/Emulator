@@ -11,8 +11,11 @@ class VFSApp:
         self.root.geometry("800x600")
         self.vfs_path = vfs_path
         self.script_path = script_path
+        self.current_vfs = {}
+        self.current_dir = "/"
 
         self.create_widgets()
+        self.initialize_vfs()
         self.print_output(f"VFS Emulator запущен")
         self.print_output(f"VFS путь: {vfs_path}")
         if script_path:
@@ -51,12 +54,17 @@ class VFSApp:
                     if command == "exit":
                         self.root.quit()
                     elif command == "ls":
-                        self.print_output(f"ls command with args: {args}")
+                        self.list_directory(args)
                     elif command == "cd":
-                        self.print_output(f"cd command with args: {args}")
+                        self.change_directory(args)
                     elif command == "echo":
                         message = " ".join(args)
                         self.print_output(message)
+                    elif command == "vfs-init":
+                        self.initialize_vfs()
+                        self.print_output("VFS инициализирована по умолчанию")
+                    elif command == "pwd":
+                        self.print_output(f"Текущая директория: {self.current_dir}")
                     else:
                         self.print_output(f"Unknown command: {command}")
 
@@ -125,6 +133,115 @@ class VFSApp:
 
         except Exception as e:
             self.print_output(f"Ошибка чтения скрипта: {e}")
+
+
+    def initialize_vfs(self):
+        self.current_vfs = {
+            "/": {
+                "type": "directory",
+                "content": {
+                    "home": {
+                        "type": "directory",
+                        "content": {
+                            "user": {
+                                "type": "directory",
+                                "content": {
+                                    "documents": {"type": "directory", "content": {}},
+                                    "photos": {"type": "directory", "content": {}}
+                                }
+                            }
+                        }
+                    },
+                    "etc": {
+                        "type": "directory",
+                        "content": {
+                            "config.txt": {"type": "file", "size": 1024},
+                            "settings.ini": {"type": "file", "size": 512}
+                        }
+                    },
+                    "readme.txt": {"type": "file", "size": 2048}
+                }
+            }
+        }
+        self.current_dir = "/"
+
+        if os.path.exists(self.vfs_path):
+            import shutil
+            shutil.rmtree(self.vfs_path)
+        os.makedirs(self.vfs_path, exist_ok=True)
+
+
+    def list_directory(self, args):
+        try:
+            current = self.get_current_directory()
+            if not current or current["type"] != "directory":
+                self.print_output("Ошибка: не является директорией")
+                return
+
+            items = []
+            for name, item in current["content"].items():
+                item_type = "d" if item["type"] == "directory" else "f"
+                items.append(f"{item_type} {name}")
+
+            self.print_output("\n".join(items) if items else "Директория пуста")
+
+        except Exception as e:
+            self.print_output(f"Ошибка ls: {e}")
+
+
+    def change_directory(self, args):
+        if not args:
+            self.print_output("Ошибка: укажите путь")
+            return
+
+        path = args[0]
+        try:
+            if path == "/":
+                self.current_dir = "/"
+            elif path == "..":
+                if self.current_dir != "/":
+                    parts = self.current_dir.rstrip('/').split('/')
+                    self.current_dir = '/' + '/'.join(parts[:-1]) if len(parts) > 1 else "/"
+            else:
+                new_path = os.path.join(self.current_dir, path).replace('\\', '/')
+                if self.path_exists(new_path):
+                    self.current_dir = new_path
+                else:
+                    self.print_output(f"Ошибка: директория {path} не существует")
+
+            self.print_output(f"Текущая директория: {self.current_dir}")
+
+        except Exception as e:
+            self.print_output(f"Ошибка cd: {e}")
+
+
+    def get_current_directory(self):
+        if self.current_dir == "/":
+            return self.current_vfs.get("/")
+
+        parts = self.current_dir.strip('/').split('/')
+        current = self.current_vfs.get("/")
+        for part in parts:
+            if part and current and current["type"] == "directory":
+                current = current["content"].get(part)
+            else:
+                return None
+        return current
+
+
+    def path_exists(self, path):
+        if path == "/":
+            return True
+
+        parts = path.strip('/').split('/')
+        current = self.current_vfs.get("/")
+        for part in parts:
+            if part and current and current["type"] == "directory":
+                current = current["content"].get(part)
+            else:
+                return False
+        return current is not None
+
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description='VFS Emulator')

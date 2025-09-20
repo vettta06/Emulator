@@ -1,0 +1,10 @@
+pwd
+ls
+cd home
+ls
+cd user
+ls
+cd documents
+pwd
+cd /
+ls
