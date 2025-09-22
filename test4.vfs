@@ -1,4 +1,4 @@
-echo "=== Тестирование chmod ==="
+echo "chmod"
 
 echo "1. Текущие права доступа:"
 ls -l
@@ -16,7 +16,6 @@ cd /
 
 echo "4. Ошибки chmod:"
 chmod 888 readme.txt
-chmod 755 nonexistent
 chmod 644
 chmod abc readme.txt
 
@@ -25,4 +24,3 @@ chmod 644 readme.txt
 chmod 755 home
 ls -l
 
-echo "Тестирование chmod завершено!"

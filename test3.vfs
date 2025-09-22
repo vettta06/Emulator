@@ -1,8 +1,7 @@
-echo "=== Testing VFS commands ==="
 pwd
 ls
 
-echo "=== Navigation ==="
+echo "Navigation"
 cd home
 ls
 cd user
@@ -12,31 +11,27 @@ pwd
 cd /
 ls /
 
-echo "=== Improved ls ==="
+echo "ls"
 ls /home
 ls /etc
 ls /home/user
 
-echo "=== Find command ==="
+echo "Find command"
 find user
 find config.txt
 find readme.txt
-find nonexistent
 
-echo "=== Reverse command ==="
+
+echo "Reverse command"
 rev "Hello World"
-rev "VFS Emulator"
-rev "Test with spaces"
 
-echo "=== Error handling ==="
-cd nonexistent
-ls /invalid/path
+echo "Error commands"
+ls /strange/path
 cd /etc/config.txt
 find
-rev
 
-echo "=== VFS reinitialization ==="
+
+echo "VFS reinitialization"
 vfs-init
 ls
 
-echo "=== Test completed ==="

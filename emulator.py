@@ -23,7 +23,7 @@ class VFSApp:
 
 
     def create_gui(self):
-        self.output_area = scrolledtext.ScrolledText(   #область вывода текста
+        self.output_area = scrolledtext.ScrolledText(
             self.root,
             wrap=tk.WORD,
             state='disabled',
@@ -122,7 +122,6 @@ class VFSApp:
             return
 
         self.print_output(f"# Выполнение скрипта: {self.script_path}")
-        self.print_output("#" + "=" * 50)
 
         try:
             with open(self.script_path, 'r', encoding='utf-8') as f:

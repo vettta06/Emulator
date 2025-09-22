@@ -1,4 +1,4 @@
 @echo off
 echo Testing VFS Emulator...
-python emulator.py --vfs-path ./test_folder --script test.vfs
+python emulator.py --vfs-path ./test_folder --script test4.vfs
 pause
