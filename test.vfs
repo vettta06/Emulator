@@ -1,4 +1,4 @@
-ls -l -a
+ls -l
 cd "/home/user/projects"
 echo "It's VFS emulator"
 ls "my_folder with spaces"

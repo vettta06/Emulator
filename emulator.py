@@ -13,8 +13,7 @@ class VFSApp:
         self.script_path = script_path
         self.current_vfs = {}
         self.current_dir = "/"
-
-        self.create_widgets()
+        self.create_gui()
         self.initialize_vfs()
         self.print_output(f"VFS Emulator запущен")
         self.print_output(f"VFS путь: {vfs_path}")
@@ -23,8 +22,8 @@ class VFSApp:
             self.root.after(1000, self.run_script)
 
 
-    def create_widgets(self):
-        self.output_area = scrolledtext.ScrolledText(
+    def create_gui(self):
+        self.output_area = scrolledtext.ScrolledText(   #область вывода текста
             self.root,
             wrap=tk.WORD,
             state='disabled',
@@ -38,9 +37,6 @@ class VFSApp:
         self.command_entry = Entry(input_frame, font=('Courier', 12))
         self.command_entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
         self.command_entry.bind('<Return>', self.execute_command)
-
-        self.execute_button = Button(input_frame, text="Execute", command=self.execute_command)
-        self.execute_button.pack(side=tk.RIGHT, padx=(5, 0))
 
 
     def execute_command(self, event=None):
@@ -78,9 +74,6 @@ class VFSApp:
 
             except ValueError as e:
                 self.print_output(f"Ошибка синтаксиса: {e}")
-            except Exception as e:
-                self.print_output(f"Неожиданная ошибка: {e}")
-
             self.command_entry.delete(0, tk.END)
 
 
@@ -317,12 +310,12 @@ class VFSApp:
 
     def change_permissions(self, args):
         if len(args) < 2:
-            self.print_output("Ошибка: укажите права и путь (chmod права путь)")
+            self.print_output("Ошибка: укажите права и путь ")
             return
         perms = args[0]
         target_path = args[1]
         if not perms.isdigit() or len(perms) != 3 or not all(0 <= int(p) <= 7 for p in perms):
-            self.print_output("Ошибка: права доступа должны быть трехзначным числом (например: 755)")
+            self.print_output("Ошибка: права доступа должны быть трехзначным числом")
             return
         if not target_path.startswith('/'):
             target_path = os.path.join(self.current_dir, target_path).replace('\\', '/')
@@ -349,11 +342,10 @@ def parse_arguments():
 if __name__ == "__main__":
     args = parse_arguments()
     print("=" * 50)
-    print("ПАРАМЕТРЫ ЗАПУСКА:")
+    print("Параметры запуска эмулятора:")
     print(f"VFS путь: {args.vfs_path}")
     print(f"Скрипт: {args.script if args.script else 'Не указан'}")
     print("=" * 50)
-
     root = tk.Tk()
     app = VFSApp(root, vfs_path=args.vfs_path, script_path=args.script)
     root.mainloop()
